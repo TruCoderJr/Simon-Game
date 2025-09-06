@@ -1,130 +1,147 @@
 // Initialize game sequences and button colors
-let gameSeq = []; // Stores the sequence of colors to be followed by the user
-let userSeq = []; // Stores the user's input sequence
-let btns = ["red", "green", "black", "blue"]; // Available button colors
+let gameSeq = [];
+let userSeq = [];
+let btns = ["red", "green", "black", "blue"];
 
-// DOM element references
-let body = document.querySelector('body'); // Reference to the body element for visual effects
-let boxBtn = document.querySelectorAll('.box'); // All game buttons
+// DOM elements
+let body = document.querySelector("body");
+let boxBtn = document.querySelectorAll(".box");
+let level = 0;
+let lvl = document.querySelector(".lvl");
+let isPlay = false;
+let str = document.querySelector(".str");
 
-let level = 0; // Tracks the current game level
-let lvl = document.querySelector('.lvl'); // Displays the current level
-let isPlay = false; // Indicates if the game is in play mode
-let str = document.querySelector('.str'); // Start/Exit button
-
-let highestScore = 0; // Tracks the highest score achieved
-let score = 0; // Tracks the current score
-
-// Score display elements
+// Score display
 let aftLine1 = document.querySelector(".l1");
 let aftLine2 = document.querySelector(".l2");
 
-let scr = document.createElement('h3'); // Element to display the current score
-let high = document.createElement('h3'); // Element to display the highest score
+let scr = document.createElement("h3");
+let high = document.createElement("h3");
 
-scr.innerText = `Score = ${score}`; // Initialize score display
-high.innerText = `HighestScore = ${highestScore}`; // Initialize highest score display
+let score = 0;
+let highestScore = localStorage.getItem("highestScore") || 0;
 
-aftLine1.append(scr); // Append score element to the DOM
-aftLine2.append(high); // Append highest score element to the DOM
+scr.innerText = `Score = ${score}`;
+high.innerText = `HighestScore = ${highestScore}`;
 
-/**
- * Flashes a button to indicate the sequence visually.
- * @param {HTMLElement} btn - The button element to flash.
- */
-function flash(btn) {
-    btn.classList.add('flash'); // Add flash effect
-    setTimeout(() => {
-        btn.classList.remove('flash'); // Remove flash effect after 333ms
-    }, 333);
+aftLine1.append(scr);
+aftLine2.append(high);
+
+// 🔊 Sound mapping
+let sounds = {
+  red: new Audio("sounds/red.mp3"),
+  green: new Audio("sounds/green.mp3"),
+  black: new Audio("sounds/black.mp3"),
+  blue: new Audio("sounds/blue.mp3"),
+};
+
+function playSound(color) {
+  if (sounds[color]) {
+    sounds[color].currentTime = 0;
+    sounds[color].play();
+  }
 }
 
-/**
- * Advances the game to the next level.
- * Resets the user sequence, updates the score, and generates a new color in the sequence.
- */
-function levelUp() {
-    userSeq = []; // Clear user sequence for the new level
-    level++; // Increment the level
-    score = level - 1; // Update score (level starts from 1)
-    scr.innerText = `Score = ${score}`; // Update score display
+// 🎚 Difficulty control
+let difficulty = "medium";
+let speedMap = {
+  easy: 800,
+  medium: 500,
+  hard: 250,
+};
 
-    if (highestScore <= score) {
-        highestScore = score; // Update highest score if the current score exceeds it
-    }
-    high.innerText = `HighestScore = ${highestScore}`; // Update highest score display
-    lvl.innerText = `Level ${level}`; // Update level display
-
-    let ranIdx = Math.floor(Math.random() * 4); // Random index for button color
-    let ranCol = btns[ranIdx]; // Random color
-    let ranBtn = document.querySelector(`.${ranCol}`); // Corresponding button element
-
-    gameSeq.push(ranCol); // Add the random color to the game sequence
-    flash(ranBtn); // Flash the random button
-}
-
-/**
- * Handles the Start/Exit button click event.
- * Toggles between starting and stopping the game.
- */
-str.addEventListener('click', function () {
-    if (!isPlay) {
-        isPlay = true; // Set play mode to true
-        str.innerText = "Exit"; // Update button text
-        levelUp(); // Start the game
-    } else {
-        isPlay = false; // Set play mode to false
-        str.innerText = "Play"; // Update button text
-        level = 0; // Reset level
-        score = 0; // Reset score
-        lvl.innerText = `Press play button to start the game`; // Reset level display
-    }
+document.querySelector("#difficulty").addEventListener("change", (e) => {
+  difficulty = e.target.value;
 });
 
-/**
- * Checks the user's input sequence against the game sequence.
- * Ends the game if the input is incorrect; otherwise, advances to the next level.
- * @param {number} idx - The index of the current button in the sequence.
- */
+// 🔆 Flash effect
+function flash(btn) {
+  btn.classList.add("flash");
+  let color = btn.getAttribute("id");
+  playSound(color);
+
+  setTimeout(() => {
+    btn.classList.remove("flash");
+  }, speedMap[difficulty]);
+}
+
+// ⬆️ Next level
+function levelUp() {
+  userSeq = [];
+  level++;
+  score = level - 1;
+  scr.innerText = `Score = ${score}`;
+
+  if (highestScore <= score) {
+    highestScore = score;
+    localStorage.setItem("highestScore", highestScore);
+  }
+  high.innerText = `HighestScore = ${highestScore}`;
+  lvl.innerText = `Level ${level}`;
+
+  let ranIdx = Math.floor(Math.random() * 4);
+  let ranCol = btns[ranIdx];
+  let ranBtn = document.querySelector(`#${ranCol}`);
+
+  gameSeq.push(ranCol);
+  flash(ranBtn);
+}
+
+// ▶️ Start/Exit button
+str.addEventListener("click", function () {
+  if (!isPlay) {
+    isPlay = true;
+    str.innerText = "Exit";
+    levelUp();
+  } else {
+    isPlay = false;
+    str.innerText = "Play";
+    resetGame();
+  }
+});
+
+// ✅ Check user answer
 function checkAns(idx) {
-    if (userSeq[idx] === gameSeq[idx]) {
-        // If the user sequence matches the game sequence
-        if (gameSeq.length - 1 === userSeq.length - 1) {
-            // If the user has completed the current sequence
-            setTimeout(() => {
-                levelUp(); // Advance to the next level
-            }, 1000);
-        }
-    } else {
-        // If the user sequence is incorrect
-        lvl.innerHTML = `Game Over!!! Press play button to start the game`;
-        body.classList.add('danger'); // Add visual feedback for game over
-        setTimeout(() => {
-            body.classList.remove('danger'); // Remove visual feedback
-            isPlay = false; // Reset play mode
-            str.innerText = "Play"; // Update button text
-            level = 0; // Reset level
-            score = 0; // Reset score
-            gameSeq = []; // Clear the game sequence
-        }, 1000);
+  if (userSeq[idx] === gameSeq[idx]) {
+    if (gameSeq.length === userSeq.length) {
+      setTimeout(() => {
+        levelUp();
+      }, 1000);
     }
+  } else {
+    lvl.innerHTML = `Game Over!!! Press play button to start again`;
+    body.classList.add("danger");
+
+    setTimeout(() => {
+      body.classList.remove("danger");
+      isPlay = false;
+      str.innerText = "Play";
+      resetGame();
+    }, 1000);
+  }
 }
 
-/**
- * Handles user button clicks.
- * Flashes the button, adds the button's color to the user sequence, and checks the answer.
- */
+// 🎮 Button click handler
 function boxBtnPress() {
-    let btn = this; // Reference to the clicked button
-    flash(btn); // Flash the button
-    let userCol = btn.getAttribute('id'); // Get the button's color
-    userSeq.push(userCol); // Add the color to the user sequence
-    checkAns(userSeq.length - 1); // Check the user's input
+  if (!isPlay) return; // ignore if game not started
+
+  let btn = this;
+  flash(btn);
+  let userCol = btn.getAttribute("id");
+  userSeq.push(userCol);
+  checkAns(userSeq.length - 1);
 }
 
-// Attach event listeners to all game buttons
+// Attach event listeners
 for (let btn of boxBtn) {
-    console.log(btn);
-    
-    btn.addEventListener('click', boxBtnPress);
+  btn.addEventListener("click", boxBtnPress);
+}
+
+// ♻️ Reset game
+function resetGame() {
+  level = 0;
+  score = 0;
+  gameSeq = [];
+  scr.innerText = `Score = ${score}`;
+  lvl.innerText = `Press play button to start the game`;
 }
